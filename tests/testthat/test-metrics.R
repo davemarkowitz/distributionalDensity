@@ -1,9 +1,9 @@
 # ---- dd_prevalence ---------------------------------------------------
 
-test_that("dd_prevalence divides events by word count", {
-  expect_equal(dd_prevalence(25, 500), 0.05)
+test_that("dd_prevalence returns a percentage of word count, LIWC-style", {
+  expect_equal(dd_prevalence(25, 500), 5)
   expect_equal(dd_prevalence(0, 500), 0)
-  expect_equal(dd_prevalence(500, 500), 1)
+  expect_equal(dd_prevalence(500, 500), 100)
 })
 
 test_that("dd_prevalence rejects non-positive word counts", {

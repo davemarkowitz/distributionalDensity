@@ -9,7 +9,7 @@ test_that("dd() with a bare text vector builds a new id/text data frame with sco
   expect_true(is.data.frame(res))
   expect_equal(res$id, c(1, 2))
   expect_equal(res$text, texts)
-  expect_equal(res$prevalence, c(1 / 12, 1 / 12))
+  expect_equal(res$prevalence, c(100 / 12, 100 / 12))
   expect_equal(res$position, c(0.125, 0.625))
 })
 

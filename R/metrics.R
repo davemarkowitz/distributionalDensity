@@ -1,19 +1,21 @@
 #' Prevalence
 #'
-#' The proportion of a text occupied by a verbal category: how much of
-#' the dimension is present, independent of where it falls.
+#' The percentage of a text occupied by a verbal category: how much of
+#' the dimension is present, independent of where it falls. Expressed
+#' as a percentage of total word count, matching the convention used
+#' by LIWC and similar word-count tools.
 #'
 #' @param k Number of category occurrences (a non-negative integer).
 #' @param n_words Total number of tokens in the text.
 #'
-#' @return A numeric proportion in \eqn{[0, 1]}.
+#' @return A numeric percentage in \eqn{[0, 100]}.
 #' @export
 #'
 #' @examples
 #' dd_prevalence(k = 25, n_words = 500)
 dd_prevalence <- function(k, n_words) {
   if (n_words <= 0) stop("`n_words` must be positive.", call. = FALSE)
-  k / n_words
+  100 * k / n_words
 }
 
 #' Burstiness

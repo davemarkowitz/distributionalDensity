@@ -16,7 +16,7 @@ density recovers that information with three additional parameters:
 
 | Parameter | Question it answers | Range |
 |---|---|---|
-| **Prevalence** | How much of the dimension is present? | `[0, 1]` |
+| **Prevalence** | How much of the dimension is present? | `[0, 100]` |
 | **Burstiness** | How clustered are its occurrences? | `[-1, 1]` |
 | **Position** | How early or late does it occur, on average? | `[0, 1]` |
 | **Dispersion** | How widely are occurrences spread around that mean? | `[0, 1]` |
@@ -57,9 +57,9 @@ dd(text = texts, dictionary = self_refs)
 #> 2  2 The best part of the day, for me, is the morning coffee.      12
 #> 3  3  The best part of the day is the morning coffee, for me.      12
 #>   n_events prevalence burstiness burstiness_raw position dispersion
-#> 1        1    0.08333         NA             NA   0.1250         NA
-#> 2        1    0.08333         NA             NA   0.6250         NA
-#> 3        1    0.08333         NA             NA   0.9583         NA
+#> 1        1      8.333         NA             NA   0.1250         NA
+#> 2        1      8.333         NA             NA   0.6250         NA
+#> 3        1      8.333         NA             NA   0.9583         NA
 #>   dispersion_continuous
 #> 1                     NA
 #> 2                     NA

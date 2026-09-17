@@ -12,11 +12,13 @@ dd_prevalence(k, n_words)
 \item{n_words}{Total number of tokens in the text.}
 }
 \value{
-A numeric proportion in \eqn{[0, 1]}.
+A numeric percentage in \eqn{[0, 100]}.
 }
 \description{
-The proportion of a text occupied by a verbal category: how much of
-the dimension is present, independent of where it falls.
+The percentage of a text occupied by a verbal category: how much of
+the dimension is present, independent of where it falls. Expressed
+as a percentage of total word count, matching the convention used
+by LIWC and similar word-count tools.
 }
 \examples{
 dd_prevalence(k = 25, n_words = 500)

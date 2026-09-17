@@ -37,7 +37,7 @@ expected <- data.frame(
   id         = c("Periodic", "Random", "Bursty", "Concentrated"),
   n_words    = 48L,
   n_events   = 6L,
-  prevalence = 0.125,
+  prevalence = 12.5,
   burstiness = c(-1.00, 0.09, 0.73, -0.59),
   position   = c(0.427, 0.309, 0.503, 0.500),
   dispersion = c(0.645, 0.798, 0.931, 0.254),
