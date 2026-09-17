@@ -2,10 +2,7 @@
 
 `distributionalDensity` computes the four **distributional density**
 parameters of a psychologically-consequential language dimension
-within a text, as described in Markowitz (2026), *Measuring the
-Distributional Density of Psychological Characteristics in Language:
-The Prevalence, Burstiness, Position, and Dispersion of Verbal
-Behavior*.
+within a text: prevalence, burstiness, position, and dispersion.
 
 Traditional psychology-of-language and NLP research measures a
 construct's **prevalence**: how much of it appears in a text, relative
