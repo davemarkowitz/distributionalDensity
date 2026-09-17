@@ -1,0 +1,162 @@
+# distributionalDensity
+
+`distributionalDensity` computes the four **distributional density**
+parameters of a psychologically-consequential language dimension
+within a text, as described in Markowitz (2026), *Measuring the
+Distributional Density of Psychological Characteristics in Language:
+The Prevalence, Burstiness, Position, and Dispersion of Verbal
+Behavior*.
+
+Traditional psychology-of-language and NLP research measures a
+construct's **prevalence**: how much of it appears in a text, relative
+to total word count. Prevalence collapses a text into a single count
+and discards everything about *where* and *how* those words are
+placed. Two texts with identical prevalence of self-references, for
+example, can differ enormously in whether those references are spread
+evenly through the text, clustered into a single burst, or split
+between the opening and closing lines — differences that plausibly
+reflect different patterns of psychological attention. Distributional
+density recovers that information with three additional parameters:
+
+| Parameter | Question it answers | Range |
+|---|---|---|
+| **Prevalence** | How much of the dimension is present? | `[0, 1]` |
+| **Burstiness** | How clustered are its occurrences? | `[-1, 1]` |
+| **Position** | How early or late does it occur, on average? | `[0, 1]` |
+| **Dispersion** | How widely are occurrences spread around that mean? | `[0, 1]` |
+
+The four parameters are conceptually independent: a text can have
+extreme clustering (high burstiness) yet near-perfect positional
+balance (position ≈ .50), and dispersion is what distinguishes "one
+cluster at the midpoint" from "two clusters bookending the text" —
+cases prevalence, burstiness, and position alone cannot tell apart.
+
+## Installation
+
+```r
+# install.packages("devtools")
+devtools::install_github("davemarkowitz/distributionalDensity")
+```
+
+## Usage
+
+`dd()` is the main entry point. Give it a character vector of texts
+and a dictionary, and it returns one row per text with the four
+parameters appended as columns:
+
+```r
+library(distributionalDensity)
+
+texts <- c(
+  frontloaded = "For me, the best part of the day is the morning coffee.",
+  midloaded   = "The best part of the day, for me, is the morning coffee.",
+  backloaded  = "The best part of the day is the morning coffee, for me."
+)
+
+self_words <- c("i", "me", "my", "mine", "myself")
+
+dd(text = texts, dictionary = self_words)
+#>   id                                                       text n_words
+#> 1  1  For me, the best part of the day is the morning coffee.      12
+#> 2  2 The best part of the day, for me, is the morning coffee.      12
+#> 3  3  The best part of the day is the morning coffee, for me.      12
+#>   n_events prevalence burstiness burstiness_raw position dispersion
+#> 1        1    0.08333         NA             NA   0.1250         NA
+#> 2        1    0.08333         NA             NA   0.6250         NA
+#> 3        1    0.08333         NA             NA   0.9583         NA
+#>   dispersion_continuous
+#> 1                     NA
+#> 2                     NA
+#> 3                     NA
+```
+
+Prevalence is identical across all three sentences (8.3%), but
+position moves from near 0 (frontloaded) through the middle
+(midloaded) to near 1 (backloaded) — exactly the pattern the
+manuscript's motivating example describes. (Burstiness and dispersion
+require at least 3 and 2 occurrences respectively to be defined;
+single-occurrence texts correctly return `NA` for both.)
+
+If you already have a data frame of texts, pass it as `data` and the
+scores are appended onto it directly rather than returned as a
+separate table:
+
+```r
+df <- data.frame(id = c("p1", "p2", "p3"), text = unname(texts))
+dd(text = "text", data = df, id = "id", dictionary = self_words)
+```
+
+Score multiple categories at once with a named list of word lists;
+column names are prefixed by category when there's more than one:
+
+```r
+dd(
+  text = "text", data = df, id = "id",
+  dictionary = list(
+    self = c("i", "me", "my", "mine", "myself"),
+    time = c("day", "morning")
+  )
+)
+#> columns: self_prevalence, self_burstiness, ..., time_prevalence, time_burstiness, ...
+```
+
+Dictionary entries ending in `*` match by prefix, LIWC-style (e.g.
+`"happi*"` matches "happy", "happiness", "happier").
+
+`distributional_density()` is the underlying engine behind `dd()` and
+returns the long, one-row-per-text-per-category form directly (handy
+for plotting or joining, e.g. recreating a figure like the manuscript's
+Figure 1):
+
+```r
+distributional_density(texts, self_words)
+```
+
+### Building metrics from token positions directly
+
+The individual metric functions operate on raw occurrence positions,
+for users who want to work from their own tokenization or an existing
+dictionary-tagging pipeline:
+
+```r
+dd_prevalence(k = 6, n_words = 48)
+dd_burstiness(c(1, 9, 17, 25, 33, 41))   # periodic placement, B near -1
+dd_position(c(1, 9, 17, 25, 33, 41), n_words = 48)
+dd_dispersion(c(1, 9, 17, 25, 33, 41), n_words = 48)
+```
+
+## Method notes
+
+- **Burstiness** uses the finite-size-corrected estimator of Kim & Jo
+  (2016), built on the uncorrected statistic of Goh & Barabási (2008).
+  The correction matters: the uncorrected statistic is confounded with
+  the number of occurrences (and therefore with prevalence), which
+  would manufacture a spurious burstiness–prevalence correlation in
+  any corpus where text length or base rate varies. The uncorrected
+  version is available via `dd_burstiness(..., method = "raw")` for
+  comparison only.
+- **Dispersion** is normalized by an upper bound on the spread
+  attainable at a given mean position and number of occurrences. The
+  default (`bound = "finite"`) uses a tighter, discrete-token-aware
+  bound; `bound = "continuous"` uses the closed-form bound
+  `sqrt(m * (1 - m))` (m = mean position), which is only attainable in
+  the limit of infinite text length and so understates dispersion for
+  short texts.
+- All four parameters are computed on the observed occurrences
+  themselves (population statistics), not sample estimates of a larger
+  population.
+
+## References
+
+Goh, K.-I., & Barabási, A.-L. (2008). Burstiness and memory in complex
+systems. *Europhysics Letters*, *81*(4), 48002.
+<https://doi.org/10.1209/0295-5075/81/48002>
+
+Kim, E.-K., & Jo, H.-H. (2016). Measuring burstiness for finite event
+sequences. *Physical Review E*, *94*(3), 032311.
+<https://doi.org/10.1103/PhysRevE.94.032311>
+
+Fleeson, W. (2001). Toward a structure- and process-integrated view of
+personality: Traits as density distributions of states. *Journal of
+Personality and Social Psychology*, *80*(6), 1011–1027.
+<https://doi.org/10.1037/0022-3514.80.6.1011>

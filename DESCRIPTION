@@ -1,0 +1,31 @@
+Package: distributionalDensity
+Title: Prevalence, Burstiness, Position, and Dispersion of Verbal Behavior
+Version: 0.1.0
+Authors@R:
+    person("David", "Markowitz", , "davidmmarkowitz@gmail.com", role = c("aut", "cre"))
+Description: Computes the four distributional density parameters of a
+    psychologically-consequential language dimension within a text:
+    prevalence (how much of the dimension is present), burstiness (how
+    clustered its occurrences are, using the finite-size-corrected
+    estimator of Kim and Jo (2016) <doi:10.1103/PhysRevE.94.032311>
+    built on Goh and Barabasi (2008) <doi:10.1209/0295-5075/81/48002>),
+    position (the mean normalized placement of occurrences in the text),
+    and dispersion (the spread of occurrences around their mean position,
+    normalized by the maximum attainable spread at that mean). Together
+    these parameters describe how a verbal category is distributed across
+    a disclosure rather than only how frequently it occurs, extending
+    prevalence-based text analysis with a within-text analogue of Whole
+    Trait Theory's density distributions (Fleeson, 2001)
+    <doi:10.1037/0022-3514.80.6.1011>.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+URL: https://github.com/davemarkowitz/distributionalDensity
+BugReports: https://github.com/davemarkowitz/distributionalDensity/issues
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+Config/testthat/edition: 3
+VignetteBuilder: knitr
