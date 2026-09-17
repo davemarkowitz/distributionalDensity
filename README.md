@@ -4,7 +4,7 @@
 parameters of a psychologically-consequential language dimension
 within a text: prevalence, burstiness, position, and dispersion.
 
-Traditional psychology-of-language and NLP research measures a
+Traditional psychology of language and NLP research measures a
 construct's **prevalence**: how much of it appears in a text, relative
 to total word count. Prevalence collapses a text into a single count
 and discards everything about *where* and *how* those words are
