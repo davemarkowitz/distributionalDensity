@@ -49,9 +49,9 @@ texts <- c(
   backloaded  = "The best part of the day is the morning coffee, for me."
 )
 
-self_words <- c("i", "me", "my", "mine", "myself")
+self_refs <- c("i", "me", "my", "mine", "myself")
 
-dd(text = texts, dictionary = self_words)
+dd(text = texts, dictionary = self_refs)
 #>   id                                                       text n_words
 #> 1  1  For me, the best part of the day is the morning coffee.      12
 #> 2  2 The best part of the day, for me, is the morning coffee.      12
@@ -79,7 +79,7 @@ separate table:
 
 ```r
 df <- data.frame(id = c("p1", "p2", "p3"), text = unname(texts))
-dd(text = "text", data = df, id = "id", dictionary = self_words)
+dd(text = "text", data = df, id = "id", dictionary = self_refs)
 ```
 
 Score multiple categories at once with a named list of word lists;
@@ -105,7 +105,7 @@ for plotting or joining, e.g. recreating a figure like the manuscript's
 Figure 1):
 
 ```r
-distributional_density(texts, self_words)
+distributional_density(texts, self_refs)
 ```
 
 ### Building metrics from token positions directly
