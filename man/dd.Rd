@@ -25,7 +25,8 @@ frame is built from it.}
 
 \item{id}{Optional text identifiers, used to align scores back onto
 \code{data}. If \code{data} is supplied, this can be a single string naming
-an id column in \code{data}. Defaults to row order.}
+an id column in \code{data}. Defaults to row order, or to \code{names(text)}
+if \code{data} is not supplied and \code{text} is a named vector.}
 
 \item{bound}{As in \code{\link[=dd_dispersion]{dd_dispersion()}}: \code{"finite"} (default) or
 \code{"continuous"}.}

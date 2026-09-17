@@ -44,41 +44,37 @@ parameters appended as columns:
 library(distributionalDensity)
 
 texts <- c(
-  frontloaded = "For me, the best part of the day is the morning coffee.",
-  midloaded   = "The best part of the day, for me, is the morning coffee.",
-  backloaded  = "The best part of the day is the morning coffee, for me."
+  periodic = "I wake at dawn and brew the coffee. My mug comes outside to the porch. There, I watch the sky brighten over the yard. My thoughts settle as the light spreads. For me, this is the best hour of all. Mine alone, before the busy day begins again.",
+  bursty   = "I brew my coffee; I always have, the same way every morning, while the house goes quiet and the kettle cools and the day takes over with errands, emails, and everything else. Still, that first warm sip always feels like it was made for me, my reward, mine."
 )
 
 self_refs <- c("i", "me", "my", "mine", "myself")
 
-dd(text = texts, dictionary = self_refs)
-#>   id                                                       text n_words
-#> 1  1  For me, the best part of the day is the morning coffee.      12
-#> 2  2 The best part of the day, for me, is the morning coffee.      12
-#> 3  3  The best part of the day is the morning coffee, for me.      12
-#>   n_events prevalence burstiness burstiness_raw position dispersion
-#> 1        1      8.333         NA             NA   0.1250         NA
-#> 2        1      8.333         NA             NA   0.6250         NA
-#> 3        1      8.333         NA             NA   0.9583         NA
-#>   dispersion_continuous
-#> 1                     NA
-#> 2                     NA
-#> 3                     NA
+dd(text = texts, dictionary = self_refs)[, c("id", "n_words", "n_events",
+                                              "prevalence", "burstiness",
+                                              "position", "dispersion")]
+#> (also returns `text`, `burstiness_raw`, and `dispersion_continuous`, omitted here for width)
+#>         id n_words n_events prevalence burstiness position dispersion
+#> 1 periodic      48        6       12.5    -1.0000   0.4271     0.6448
+#> 2   bursty      48        6       12.5     0.7278   0.5035     0.9306
 ```
 
-Prevalence is identical across all three sentences (8.3%), but
-position moves from near 0 (frontloaded) through the middle
-(midloaded) to near 1 (backloaded) — exactly the pattern the
-manuscript's motivating example describes. (Burstiness and dispersion
-require at least 3 and 2 occurrences respectively to be defined;
-single-occurrence texts correctly return `NA` for both.)
+Both texts are 48 words long with 6 self-references each, so prevalence
+is identical (12.5%) — a prevalence-only analysis would treat them as
+the same. But the self-references are spaced almost perfectly evenly
+in `periodic` (burstiness ≈ -1) and clumped together late in `bursty`
+(burstiness ≈ +0.73, dispersion higher too), which is exactly the
+distinction prevalence alone can't make. (Burstiness needs at least 3
+occurrences and dispersion at least 2 to be defined; texts with fewer
+self-references than that correctly return `NA` for those columns
+rather than a misleading number.)
 
 If you already have a data frame of texts, pass it as `data` and the
 scores are appended onto it directly rather than returned as a
 separate table:
 
 ```r
-df <- data.frame(id = c("p1", "p2", "p3"), text = unname(texts))
+df <- data.frame(id = c("p1", "p2"), text = unname(texts))
 dd(text = "text", data = df, id = "id", dictionary = self_refs)
 ```
 

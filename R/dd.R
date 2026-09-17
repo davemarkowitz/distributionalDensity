@@ -49,7 +49,8 @@ widen_scores <- function(scores) {
 #'   frame is built from it.
 #' @param id Optional text identifiers, used to align scores back onto
 #'   `data`. If `data` is supplied, this can be a single string naming
-#'   an id column in `data`. Defaults to row order.
+#'   an id column in `data`. Defaults to row order, or to `names(text)`
+#'   if `data` is not supplied and `text` is a named vector.
 #' @param bound As in [dd_dispersion()]: `"finite"` (default) or
 #'   `"continuous"`.
 #'
@@ -95,8 +96,14 @@ dd <- function(text, dictionary, data = NULL, id = NULL, bound = c("finite", "co
       stop("`text` must be a character vector when `data` is not supplied.", call. = FALSE)
     }
     text_vec <- text
-    id_vec <- if (!is.null(id)) id else seq_along(text_vec)
-    out <- data.frame(id = id_vec, text = text_vec, stringsAsFactors = FALSE)
+    id_vec <- if (!is.null(id)) {
+      id
+    } else if (!is.null(names(text_vec))) {
+      names(text_vec)
+    } else {
+      seq_along(text_vec)
+    }
+    out <- data.frame(id = id_vec, text = unname(text_vec), stringsAsFactors = FALSE)
   }
 
   scores <- distributional_density(text_vec, dictionary, id = id_vec, bound = bound)

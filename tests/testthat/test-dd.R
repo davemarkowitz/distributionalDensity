@@ -13,6 +13,19 @@ test_that("dd() with a bare text vector builds a new id/text data frame with sco
   expect_equal(res$position, c(0.125, 0.625))
 })
 
+test_that("dd() uses names(text) as id when text is named and id is not supplied", {
+  named_texts <- setNames(texts, c("a", "b"))
+  res <- dd(text = named_texts, dictionary = self_words)
+  expect_equal(res$id, c("a", "b"))
+  expect_equal(res$text, texts)  # text column itself stays unnamed
+})
+
+test_that("dd() falls back to row order when text is named but id is explicitly supplied", {
+  named_texts <- setNames(texts, c("a", "b"))
+  res <- dd(text = named_texts, dictionary = self_words, id = c("x", "y"))
+  expect_equal(res$id, c("x", "y"))
+})
+
 test_that("dd() with data appends columns to the existing data frame without altering original columns", {
   df <- data.frame(id = c("p1", "p2"), text = texts, age = c(30, 45),
                     stringsAsFactors = FALSE)
