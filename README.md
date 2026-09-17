@@ -11,8 +11,7 @@ and discards everything about *where* and *how* those words are
 placed. Two texts with identical prevalence of self-references, for
 example, can differ enormously in whether those references are spread
 evenly through the text, clustered into a single burst, or split
-between the opening and closing lines — differences that plausibly
-reflect different patterns of psychological attention. Distributional
+between the opening and closing lines. Distributional
 density recovers that information with three additional parameters:
 
 | Parameter | Question it answers | Range |
@@ -35,7 +34,7 @@ cases prevalence, burstiness, and position alone cannot tell apart.
 devtools::install_github("davemarkowitz/distributionalDensity")
 ```
 
-## Usage
+## Use
 
 `dd()` is the main entry point. Give it a character vector of texts
 and a dictionary, and it returns one row per text with the four
