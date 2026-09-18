@@ -93,7 +93,9 @@ dd(
 ```
 
 Dictionary entries ending in `*` match by prefix, LIWC-style (e.g.
-`"happi*"` matches "happy", "happiness", "happier").
+`"happi*"` matches "happy", "happiness", "happier"). Matching is
+case-insensitive, so an all-lowercase dictionary (or an all-lowercase
+text) still matches correctly regardless of the case of the other side.
 
 `distributional_density()` is the underlying engine behind `dd()` and
 returns the long, one-row-per-text-per-category form directly (handy
