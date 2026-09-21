@@ -46,16 +46,34 @@ dd_prevalence <- function(k, n_words) {
 #' occurrence count, but not the sampling variance): since occurrence
 #' count scales with text length at a given category rate, this shows
 #' up as an apparent relationship between burstiness and text length.
-#' Setting `standardize = TRUE` removes it by simulating the same
-#' finite-size null the correction is built on -- `n_sim` random
+#' `standardize` addresses this by simulating the same finite-size
+#' null the correction is already built on -- `n_sim` random
 #' placements of the observed number of occurrences among `n_words`
-#' token slots -- and converting the observed value to a z-score
-#' against that null's mean and standard deviation. The result is
-#' expressed in units of null-model standard deviations rather than
-#' \eqn{[-1, 1]}, and is comparable in magnitude across texts of
-#' different lengths and occurrence counts, at the cost of being
-#' stochastic (varies slightly run to run, unless a seed is set) and
-#' more expensive to compute.
+#' token slots -- and comparing the observed value to it. Two ways of
+#' doing that comparison are offered, and they are not interchangeable:
+#'
+#' - `standardize = "z"` divides by the null's standard deviation as
+#'   well as subtracting its mean. This is an inferential statistic --
+#'   it answers "how surprising is this value under random placement"
+#'   -- and it reintroduces an occurrence-count dependence of its own:
+#'   the null's standard deviation shrinks as occurrence count grows,
+#'   so for a *genuinely* bursty category (not random placement), the
+#'   z-score grows with occurrence count even though nothing about the
+#'   degree of clustering has changed. It reflects the strength of
+#'   evidence against randomness, not the size of the clustering
+#'   effect, and should not be used to compare effect magnitudes
+#'   across texts that differ in occurrence count.
+#' - `standardize = "center"` subtracts only the null's mean, without
+#'   dividing by its spread. This does not have that problem: for a
+#'   genuinely bursty category it stays roughly constant as occurrence
+#'   count varies, while still correcting the residual mean bias the
+#'   Kim & Jo estimator leaves at very small occurrence counts. This is
+#'   the version to use when comparing burstiness magnitudes across
+#'   texts of different lengths or occurrence counts (e.g.
+#'   intercorrelating burstiness with prevalence).
+#'
+#' `standardize = "none"` (the default) leaves the `method` formula
+#' untouched.
 #'
 #' @param positions Numeric vector of occurrence positions within the
 #'   text, in any consistent unit (e.g. 1-based token indices, or
@@ -65,20 +83,21 @@ dd_prevalence <- function(k, n_words) {
 #'   give identical results.
 #' @param method Either `"kj"` (Kim & Jo, 2016, finite-size-corrected;
 #'   default) or `"raw"` (Goh & Barabasi, 2008, uncorrected).
-#' @param standardize If `TRUE`, return a z-score of the observed
-#'   burstiness against a simulated finite-size null instead of the
-#'   raw `method` value; see Details. Requires `n_words`. Default
-#'   `FALSE` leaves the `method` formula intact.
+#' @param standardize One of `"none"` (default, leaves the `method`
+#'   formula intact), `"z"`, or `"center"`; see Details. `"z"` and
+#'   `"center"` require `n_words`.
 #' @param n_words Total number of tokens in the text. Only required
-#'   when `standardize = TRUE`, to define the null's token slots.
+#'   when `standardize` is `"z"` or `"center"`, to define the null's
+#'   token slots.
 #' @param n_sim Number of null placements to simulate when
-#'   `standardize = TRUE`. Default 1000.
+#'   `standardize` is `"z"` or `"center"`. Default 1000.
 #'
-#' @return When `standardize = FALSE` (default), a numeric value in
+#' @return When `standardize = "none"` (default), a numeric value in
 #'   \eqn{[-1, 1]}, or `NA` if fewer than 3 occurrences are supplied.
-#'   When `standardize = TRUE`, a z-score (unbounded), or `NA` if
-#'   fewer than 3 occurrences are supplied or the simulated null has
-#'   zero variance (e.g. occurrences fill nearly every token slot).
+#'   When `standardize` is `"z"` or `"center"`, a numeric value
+#'   (unbounded), or `NA` if fewer than 3 occurrences are supplied or
+#'   (`"z"` only) the simulated null has zero variance (e.g.
+#'   occurrences fill nearly every token slot).
 #' @export
 #'
 #' @references
@@ -94,12 +113,14 @@ dd_prevalence <- function(k, n_words) {
 #' dd_burstiness(c(1, 9, 17, 25, 33, 41))  # periodic, B near -1
 #' dd_burstiness(c(1, 3, 5, 45, 46, 48))   # clustered, B near +1
 #'
-#' # standardized against a simulated null, so it's comparable across
-#' # texts of different length / occurrence count
-#' dd_burstiness(c(1, 3, 5, 45, 46, 48), standardize = TRUE, n_words = 48)
+#' # mean-centered against a simulated null: an effect size comparable
+#' # across texts of different length / occurrence count
+#' dd_burstiness(c(1, 3, 5, 45, 46, 48), standardize = "center", n_words = 48)
 dd_burstiness <- function(positions, method = c("kj", "raw"),
-                           standardize = FALSE, n_words = NULL, n_sim = 1000) {
+                           standardize = c("none", "z", "center"),
+                           n_words = NULL, n_sim = 1000) {
   method <- match.arg(method)
+  standardize <- match.arg(standardize)
   positions <- sort(positions)
   iet <- diff(positions)
   n <- length(iet)
@@ -120,10 +141,11 @@ dd_burstiness <- function(positions, method = c("kj", "raw"),
       ((sqrt(n + 1) - 2) * r + sqrt(n - 1))
   }
 
-  if (!standardize) return(b)
+  if (standardize == "none") return(b)
 
   if (is.null(n_words) || n_words <= 0) {
-    stop("`n_words` must be a positive number when `standardize = TRUE`.", call. = FALSE)
+    stop("`n_words` must be a positive number when `standardize` is \"z\" or \"center\".",
+         call. = FALSE)
   }
   k <- length(positions)
   if (k > n_words) {
@@ -134,9 +156,12 @@ dd_burstiness <- function(positions, method = c("kj", "raw"),
     dd_burstiness(sample.int(n_words, k), method = method)
   }, numeric(1))
   null_b <- null_b[!is.na(null_b)]
-  null_sd <- if (length(null_b) >= 2) sample_sd(null_b) else 0
+  if (length(null_b) < 2) return(NA_real_)
 
-  if (length(null_b) < 2 || null_sd == 0) return(NA_real_)
+  if (standardize == "center") return(b - mean(null_b))
+
+  null_sd <- sample_sd(null_b)
+  if (null_sd == 0) return(NA_real_)
   (b - mean(null_b)) / null_sd
 }
 

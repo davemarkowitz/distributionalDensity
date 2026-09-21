@@ -19,15 +19,17 @@
 #'   if `text` is named.
 #' @param bound Which upper bound to normalize dispersion against; see
 #'   [dd_dispersion()]. Defaults to `"finite"`.
-#' @param standardize If `TRUE`, the `burstiness` column holds a
-#'   z-score against a simulated finite-size null instead of the raw
-#'   Kim & Jo value, removing burstiness's residual dependence on
-#'   occurrence count (and so on text length); see
-#'   [dd_burstiness()]. `burstiness_raw` is never standardized.
-#'   Default `FALSE`.
+#' @param standardize One of `"none"` (default), `"z"`, or `"center"`.
+#'   If not `"none"`, the `burstiness` column holds the observed value
+#'   compared against a simulated finite-size null instead of the raw
+#'   Kim & Jo value; see [dd_burstiness()] for the difference between
+#'   `"z"` (an inferential statistic, confounded with occurrence count
+#'   for genuinely bursty categories) and `"center"` (an effect size,
+#'   comparable across texts of different lengths and occurrence
+#'   counts). `burstiness_raw` is never standardized.
 #' @param n_sim Number of null placements to simulate per
-#'   text-by-category combination when `standardize = TRUE`. Default
-#'   1000.
+#'   text-by-category combination when `standardize` is `"z"` or
+#'   `"center"`. Default 1000.
 #'
 #' @return A data frame with one row per text-by-category combination
 #'   and columns `id`, `category`, `n_words`, `n_events`, `prevalence`,
@@ -51,8 +53,9 @@
 #'   list(self = self_words, time = c("day", "morning"))
 #' )
 distributional_density <- function(text, dictionary, id = NULL, bound = c("finite", "continuous"),
-                                    standardize = FALSE, n_sim = 1000) {
+                                    standardize = c("none", "z", "center"), n_sim = 1000) {
   bound <- match.arg(bound)
+  standardize <- match.arg(standardize)
   if (!is.character(text) || length(text) < 1) {
     stop("`text` must be a non-empty character vector.", call. = FALSE)
   }

@@ -36,30 +36,43 @@ test_that("dd_burstiness position order does not matter", {
 
 # ---- dd_burstiness standardize ----------------------------------------
 
-test_that("dd_burstiness standardize = TRUE requires n_words", {
-  expect_error(dd_burstiness(c(1, 9, 17, 25), standardize = TRUE))
-  expect_error(dd_burstiness(c(1, 9, 17, 25), standardize = TRUE, n_words = 0))
+test_that("dd_burstiness standardize requires n_words", {
+  expect_error(dd_burstiness(c(1, 9, 17, 25), standardize = "z"))
+  expect_error(dd_burstiness(c(1, 9, 17, 25), standardize = "z", n_words = 0))
+  expect_error(dd_burstiness(c(1, 9, 17, 25), standardize = "center"))
 })
 
-test_that("dd_burstiness standardize = TRUE rejects n_words smaller than occurrence count", {
-  expect_error(dd_burstiness(c(1, 9, 17, 25), standardize = TRUE, n_words = 3))
+test_that("dd_burstiness standardize rejects n_words smaller than occurrence count", {
+  expect_error(dd_burstiness(c(1, 9, 17, 25), standardize = "z", n_words = 3))
+  expect_error(dd_burstiness(c(1, 9, 17, 25), standardize = "center", n_words = 3))
 })
 
-test_that("dd_burstiness standardize = TRUE is NA with fewer than 3 occurrences", {
-  expect_true(is.na(dd_burstiness(c(5, 10), standardize = TRUE, n_words = 48)))
+test_that("dd_burstiness standardize is NA with fewer than 3 occurrences", {
+  expect_true(is.na(dd_burstiness(c(5, 10), standardize = "z", n_words = 48)))
+  expect_true(is.na(dd_burstiness(c(5, 10), standardize = "center", n_words = 48)))
 })
 
-test_that("dd_burstiness standardize = TRUE returns a finite z-score for clustered and periodic patterns", {
+test_that("dd_burstiness standardize = 'z' returns a finite z-score for clustered and periodic patterns", {
   set.seed(1)
-  z_periodic <- dd_burstiness(c(1, 9, 17, 25, 33, 41), standardize = TRUE, n_words = 48, n_sim = 500)
-  z_clustered <- dd_burstiness(c(1, 3, 5, 45, 46, 48), standardize = TRUE, n_words = 48, n_sim = 500)
+  z_periodic <- dd_burstiness(c(1, 9, 17, 25, 33, 41), standardize = "z", n_words = 48, n_sim = 500)
+  z_clustered <- dd_burstiness(c(1, 3, 5, 45, 46, 48), standardize = "z", n_words = 48, n_sim = 500)
   expect_true(is.finite(z_periodic))
   expect_true(is.finite(z_clustered))
   expect_lt(z_periodic, 0)
   expect_gt(z_clustered, 0)
 })
 
-test_that("dd_burstiness standardize = TRUE is centered near zero for random placement, unlike the raw estimator", {
+test_that("dd_burstiness standardize = 'center' returns a finite value for clustered and periodic patterns", {
+  set.seed(1)
+  c_periodic <- dd_burstiness(c(1, 9, 17, 25, 33, 41), standardize = "center", n_words = 48, n_sim = 500)
+  c_clustered <- dd_burstiness(c(1, 3, 5, 45, 46, 48), standardize = "center", n_words = 48, n_sim = 500)
+  expect_true(is.finite(c_periodic))
+  expect_true(is.finite(c_clustered))
+  expect_lt(c_periodic, 0)
+  expect_gt(c_clustered, 0)
+})
+
+test_that("standardize = 'z' and 'center' are both centered near zero for random placement, unlike the raw estimator", {
   set.seed(2)
   n_words <- 300
   k <- 4  # small k: raw KJ estimator is known to run negative here
@@ -69,10 +82,45 @@ test_that("dd_burstiness standardize = TRUE is centered near zero for random pla
   })
   z_vals <- replicate(400, {
     pos <- sample.int(n_words, k)
-    dd_burstiness(pos, standardize = TRUE, n_words = n_words, n_sim = 200)
+    dd_burstiness(pos, standardize = "z", n_words = n_words, n_sim = 200)
+  })
+  center_vals <- replicate(400, {
+    pos <- sample.int(n_words, k)
+    dd_burstiness(pos, standardize = "center", n_words = n_words, n_sim = 200)
   })
   expect_lt(mean(raw_vals), -0.05)
   expect_lt(abs(mean(z_vals, na.rm = TRUE)), 0.25)
+  expect_lt(abs(mean(center_vals, na.rm = TRUE)), 0.1)
+})
+
+test_that("for a genuinely bursty process, 'z' grows with occurrence count but 'center' stays roughly flat", {
+  # Regression test for the confound standardize = 'z' can reintroduce:
+  # its denominator (the null's sd) shrinks as occurrence count grows,
+  # so a z-score inflates with k even when the true clustering strength
+  # (here, a fixed-shape Weibull interevent-time generator) is constant.
+  # standardize = 'center' (no division by the null's spread) should not
+  # show this pattern.
+  set.seed(3)
+  gen_bursty <- function(k, shape = 0.4, scale = 10) {
+    iet <- rweibull(k - 1, shape = shape, scale = scale)
+    pos <- cumsum(c(0, iet)) + 1
+    list(positions = pos, n_words = ceiling(max(pos)) + 5)
+  }
+  mean_over_k <- function(k, standardize) {
+    vals <- replicate(40, {
+      g <- gen_bursty(k)
+      dd_burstiness(g$positions, standardize = standardize, n_words = g$n_words, n_sim = 150)
+    })
+    mean(vals, na.rm = TRUE)
+  }
+
+  z_small <- mean_over_k(5, "z")
+  z_large <- mean_over_k(60, "z")
+  center_small <- mean_over_k(5, "center")
+  center_large <- mean_over_k(60, "center")
+
+  expect_gt(z_large, z_small * 2)  # z at least roughly doubles with far more occurrences
+  expect_lt(abs(center_large - center_small), 0.3)  # center stays in the same ballpark
 })
 
 # ---- dd_position --------------------------------------------------------

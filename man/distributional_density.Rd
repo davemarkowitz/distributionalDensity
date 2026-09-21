@@ -9,7 +9,7 @@ distributional_density(
   dictionary,
   id = NULL,
   bound = c("finite", "continuous"),
-  standardize = FALSE,
+  standardize = c("none", "z", "center"),
   n_sim = 1000
 )
 }
@@ -30,16 +30,18 @@ if \code{text} is named.}
 \item{bound}{Which upper bound to normalize dispersion against; see
 \code{\link[=dd_dispersion]{dd_dispersion()}}. Defaults to \code{"finite"}.}
 
-\item{standardize}{If \code{TRUE}, the \code{burstiness} column holds a
-z-score against a simulated finite-size null instead of the raw
-Kim & Jo value, removing burstiness's residual dependence on
-occurrence count (and so on text length); see
-\code{\link[=dd_burstiness]{dd_burstiness()}}. \code{burstiness_raw} is never standardized.
-Default \code{FALSE}.}
+\item{standardize}{One of \code{"none"} (default), \code{"z"}, or \code{"center"}.
+If not \code{"none"}, the \code{burstiness} column holds the observed value
+compared against a simulated finite-size null instead of the raw
+Kim & Jo value; see \code{\link[=dd_burstiness]{dd_burstiness()}} for the difference between
+\code{"z"} (an inferential statistic, confounded with occurrence count
+for genuinely bursty categories) and \code{"center"} (an effect size,
+comparable across texts of different lengths and occurrence
+counts). \code{burstiness_raw} is never standardized.}
 
 \item{n_sim}{Number of null placements to simulate per
-text-by-category combination when \code{standardize = TRUE}. Default
-1000.}
+text-by-category combination when \code{standardize} is \code{"z"} or
+\code{"center"}. Default 1000.}
 }
 \value{
 A data frame with one row per text-by-category combination

@@ -15,15 +15,17 @@ Description: Computes the four distributional density parameters of a
     normalized by the maximum attainable spread at that mean). Burstiness
     naturally grows less reliable as text length and occurrence count of
     the language dimension shrink, even after the finite-size correction;
-    the package therefore offers a standardize option that normalizes
-    burstiness against a simulated null of random occurrence placement at
-    the same text length and occurrence count, removing this residual
-    dependence so burstiness scores are comparable across texts of
-    different lengths. Together these parameters describe how a verbal
-    category is distributed across a disclosure rather than only how
-    frequently it occurs, extending prevalence-based text analysis with a
-    within-text analogue of Whole Trait Theory's density distributions
-    (Fleeson, 2001) <doi:10.1037/0022-3514.80.6.1011>.
+    the package therefore offers a standardize option that compares
+    burstiness against a simulated null of random occurrence placement
+    at the same text length and occurrence count, either as a
+    mean-centered effect size comparable across texts of different
+    lengths and occurrence counts, or as a z-score reflecting the
+    strength of evidence against random placement. Together these
+    parameters describe how a verbal category is distributed across a
+    disclosure rather than only how frequently it occurs, extending
+    prevalence-based text analysis with a within-text analogue of Whole
+    Trait Theory's density distributions (Fleeson, 2001)
+    <doi:10.1037/0022-3514.80.6.1011>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

@@ -69,7 +69,7 @@ test_that("dd() passes standardize through to distributional_density()", {
   set.seed(4)
   text <- "I lift my mug and I breathe in my first sip of it, mine alone, made for me."
   res_raw <- dd(text = text, dictionary = self_words)
-  res_std <- dd(text = text, dictionary = self_words, standardize = TRUE, n_sim = 300)
+  res_center <- dd(text = text, dictionary = self_words, standardize = "center", n_sim = 300)
 
-  expect_false(isTRUE(all.equal(res_std$burstiness, res_raw$burstiness)))
+  expect_false(isTRUE(all.equal(res_center$burstiness, res_raw$burstiness)))
 })

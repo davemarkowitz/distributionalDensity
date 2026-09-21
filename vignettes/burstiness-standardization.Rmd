@@ -66,69 +66,110 @@ where category rate is roughly stable but text length varies, shorter
 texts produce fewer occurrences and therefore noisier, more extreme
 burstiness estimates -- a text-length confound in everything but name.
 
-## The fix
+## Two ways to standardize -- and why they're not interchangeable
 
-`standardize = TRUE` (on `dd_burstiness()`, `distributional_density()`,
-and `dd()`) replaces the raw Kim & Jo value with a z-score computed
-against a simulated null: `n_sim` random placements of the same number
-of occurrences among the same number of token slots, using the same
-estimator. This is the same finite-size null the Kim & Jo correction is
-already built on -- standardizing just finishes correcting for it,
-variance and all, rather than only the mean.
+`standardize` (on `dd_burstiness()`, `distributional_density()`, and
+`dd()`) compares the observed burstiness value to a simulated null:
+`n_sim` random placements of the same number of occurrences among the
+same number of token slots, using the same estimator -- the same
+finite-size null the Kim & Jo correction is already built on. There are
+two ways to make that comparison, and they answer different questions:
+
+- **`standardize = "z"`** subtracts the null's mean *and* divides by its
+  standard deviation. This is an inferential statistic: it asks "how
+  surprising is this value if occurrences were placed at random?"
+- **`standardize = "center"`** subtracts only the null's mean, without
+  dividing by its spread. This is an effect size: it asks "how much more
+  (or less) clustered is this than random placement would produce?"
+
+It's tempting to treat `"z"` as simply a length-adjusted version of
+burstiness suitable for any cross-text comparison. It isn't -- because
+the null's standard deviation itself shrinks as occurrence count grows
+(that's exactly the pattern in the table above), dividing by it
+reintroduces an occurrence-count dependence of its own. We can see this
+by simulating a *genuinely* bursty process -- not random placement, but
+real clustering with a fixed strength -- and varying only how many
+occurrences are drawn from it:
+
+```{r sim-bursty-confound}
+gen_bursty <- function(k, shape = 0.4, scale = 10) {
+  # Weibull(shape < 1) interevent times: genuinely clustered, and the
+  # degree of clustering (set by `shape`) does not depend on k.
+  iet <- rweibull(k - 1, shape = shape, scale = scale)
+  pos <- cumsum(c(0, iet)) + 1
+  list(positions = pos, n_words = ceiling(max(pos)) + 5)
+}
+
+bursty_results <- do.call(rbind, lapply(c(5, 10, 20, 40, 80), function(k) {
+  reps <- replicate(150, {
+    g <- gen_bursty(k)
+    b <- dd_burstiness(g$positions, method = "kj")
+    z <- dd_burstiness(g$positions, standardize = "z", n_words = g$n_words, n_sim = 500)
+    ctr <- dd_burstiness(g$positions, standardize = "center", n_words = g$n_words, n_sim = 500)
+    c(raw = b, z = z, center = ctr)
+  })
+  data.frame(k = k, mean_raw = mean(reps["raw", ]),
+             mean_z = mean(reps["z", ], na.rm = TRUE),
+             mean_center = mean(reps["center", ], na.rm = TRUE))
+}))
+bursty_results
+```
+
+`mean_raw` and `mean_center` stay roughly flat across `k` -- the same
+underlying clustering strength reads as the same burstiness regardless
+of how many occurrences happened to be observed. `mean_z` climbs
+steadily, roughly doubling every time `k` doubles, for a process whose
+true clustering never changed. **The z-score reflects the strength of
+evidence against random placement, not the size of the clustering
+effect** -- more occurrences make randomness easier to rule out even
+when the effect itself is constant, the same way a t-statistic grows
+with sample size at a fixed effect size. Using `"z"` to compare
+clustering magnitudes across texts of different occurrence counts would
+reintroduce exactly the confound `standardize` exists to remove.
+
+## Using `standardize = "center"`
 
 ```{r standardize-example}
 text <- "I lift my mug and I breathe in my first sip of it, mine alone, made for me."
 self_words <- c("i", "me", "my", "mine", "myself")
 
 dd(text = text, dictionary = self_words)
-dd(text = text, dictionary = self_words, standardize = TRUE, n_sim = 2000)
+dd(text = text, dictionary = self_words, standardize = "center", n_sim = 2000)
 ```
 
-`burstiness` changes from the raw `[-1, 1]` Kim & Jo value to a z-score
-(unbounded, roughly standard-normal in scale under the null);
-`burstiness_raw` -- the uncorrected Goh & Barabasi statistic, kept for
-comparison -- is never standardized.
-
-## Standardized burstiness is no longer confounded with occurrence count
-
-Repeating the simulation above with `standardize = TRUE` shows the mean
-stays near zero and, more importantly, the variance no longer depends
-on `k`:
-
-```{r sim-standardized}
-sim_once_std <- function(k, n_words) {
-  pos <- sort(sample.int(n_words, k))
-  dd_burstiness(pos, standardize = TRUE, n_words = n_words, n_sim = 300)
-}
-
-results_std <- do.call(rbind, lapply(c(3, 5, 10, 20, 50), function(k) {
-  vals <- replicate(300, sim_once_std(k, n_words))
-  data.frame(k = k, mean_z = mean(vals, na.rm = TRUE), sd_z = sd(vals, na.rm = TRUE))
-}))
-results_std
-```
+`burstiness` changes from the raw `[-1, 1]` Kim & Jo value to a
+mean-centered value against the simulated null (unbounded, but on
+roughly the same scale as the raw statistic); `burstiness_raw` -- the
+uncorrected Goh & Barabasi statistic, kept for comparison -- is never
+standardized.
 
 ## When to use which
 
-- Use `standardize = TRUE` when burstiness will be **compared across
-  texts** that differ in length or category rate -- e.g. correlating
-  burstiness with other variables, or intercorrelating it with
-  prevalence, position, and dispersion, where a residual occurrence-count
-  dependence would otherwise masquerade as a substantive relationship.
-- Use the default `standardize = FALSE` when you want the literature's
+- Use `standardize = "center"` when burstiness will be **compared
+  across texts** that differ in length or occurrence count -- e.g.
+  correlating burstiness with other variables, or intercorrelating it
+  with prevalence, position, and dispersion, where a residual
+  occurrence-count dependence would otherwise masquerade as a
+  substantive relationship. This is the option that behaves like an
+  effect size.
+- Use `standardize = "z"` only when the question is genuinely
+  inferential -- e.g. "is this text's burstiness distinguishable from
+  random placement at all?" -- and not when comparing magnitudes across
+  texts with different occurrence counts.
+- Use the default `standardize = "none"` when you want the literature's
   published Kim & Jo statistic itself -- e.g. reporting burstiness
   values that should read on the same `[-1, 1]` scale used elsewhere in
   the burstiness literature, or reproducing another study's numbers.
-- `standardize = TRUE` is stochastic (it varies slightly run to run
-  unless you `set.seed()` first) and more expensive to compute, since it
-  simulates `n_sim` null placements per text-by-category combination.
-  Increase `n_sim` for more stable estimates at the cost of runtime;
-  1000 (the default) is adequate for most exploratory use, but consider
-  a larger value (e.g. 5000-10000) for a final analysis.
+- `standardize = "z"`/`"center"` are stochastic (they vary slightly run
+  to run unless you `set.seed()` first) and more expensive to compute,
+  since they simulate `n_sim` null placements per text-by-category
+  combination. Increase `n_sim` for more stable estimates at the cost of
+  runtime; 1000 (the default) is adequate for most exploratory use, but
+  consider a larger value (e.g. 5000-10000) for a final analysis.
 - Burstiness -- standardized or not -- is only defined for categories
   with at least 3 occurrences in a text (`NA` otherwise), and
-  `standardize = TRUE` additionally requires enough spread in occurrence
-  positions for the simulated null to have nonzero variance.
+  `standardize = "z"` additionally returns `NA` if the simulated null
+  has zero variance (e.g. occurrences fill nearly every token slot).
 
 ## References
 

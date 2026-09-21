@@ -10,7 +10,7 @@ dd(
   data = NULL,
   id = NULL,
   bound = c("finite", "continuous"),
-  standardize = FALSE,
+  standardize = c("none", "z", "center"),
   n_sim = 1000
 )
 }
@@ -39,15 +39,15 @@ if \code{data} is not supplied and \code{text} is a named vector.}
 \item{bound}{As in \code{\link[=dd_dispersion]{dd_dispersion()}}: \code{"finite"} (default) or
 \code{"continuous"}.}
 
-\item{standardize}{As in \code{\link[=distributional_density]{distributional_density()}}: if \code{TRUE},
-\code{burstiness} is a z-score against a simulated finite-size null
-rather than the raw Kim & Jo value, removing burstiness's
-residual dependence on occurrence count (and so on text length).
-Default \code{FALSE}.}
+\item{standardize}{As in \code{\link[=distributional_density]{distributional_density()}}: one of
+\code{"none"} (default), \code{"z"}, or \code{"center"}. Use \code{"center"}, not
+\code{"z"}, when comparing burstiness magnitudes across texts of
+different lengths or occurrence counts -- see \code{\link[=dd_burstiness]{dd_burstiness()}}
+for why.}
 
 \item{n_sim}{Number of null placements to simulate per
-text-by-category combination when \code{standardize = TRUE}. Default
-1000.}
+text-by-category combination when \code{standardize} is \code{"z"} or
+\code{"center"}. Default 1000.}
 }
 \value{
 A data frame: \code{data} with score columns appended if \code{data}

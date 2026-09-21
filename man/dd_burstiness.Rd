@@ -7,7 +7,7 @@
 dd_burstiness(
   positions,
   method = c("kj", "raw"),
-  standardize = FALSE,
+  standardize = c("none", "z", "center"),
   n_words = NULL,
   n_sim = 1000
 )
@@ -23,23 +23,24 @@ give identical results.}
 \item{method}{Either \code{"kj"} (Kim & Jo, 2016, finite-size-corrected;
 default) or \code{"raw"} (Goh & Barabasi, 2008, uncorrected).}
 
-\item{standardize}{If \code{TRUE}, return a z-score of the observed
-burstiness against a simulated finite-size null instead of the
-raw \code{method} value; see Details. Requires \code{n_words}. Default
-\code{FALSE} leaves the \code{method} formula intact.}
+\item{standardize}{One of \code{"none"} (default, leaves the \code{method}
+formula intact), \code{"z"}, or \code{"center"}; see Details. \code{"z"} and
+\code{"center"} require \code{n_words}.}
 
 \item{n_words}{Total number of tokens in the text. Only required
-when \code{standardize = TRUE}, to define the null's token slots.}
+when \code{standardize} is \code{"z"} or \code{"center"}, to define the null's
+token slots.}
 
 \item{n_sim}{Number of null placements to simulate when
-\code{standardize = TRUE}. Default 1000.}
+\code{standardize} is \code{"z"} or \code{"center"}. Default 1000.}
 }
 \value{
-When \code{standardize = FALSE} (default), a numeric value in
+When \code{standardize = "none"} (default), a numeric value in
 \eqn{[-1, 1]}, or \code{NA} if fewer than 3 occurrences are supplied.
-When \code{standardize = TRUE}, a z-score (unbounded), or \code{NA} if
-fewer than 3 occurrences are supplied or the simulated null has
-zero variance (e.g. occurrences fill nearly every token slot).
+When \code{standardize} is \code{"z"} or \code{"center"}, a numeric value
+(unbounded), or \code{NA} if fewer than 3 occurrences are supplied or
+(\code{"z"} only) the simulated null has zero variance (e.g.
+occurrences fill nearly every token slot).
 }
 \description{
 Measures how clustered a category's occurrences are in time (i.e.,
@@ -69,24 +70,43 @@ correction removes most of the mean bias as a function of
 occurrence count, but not the sampling variance): since occurrence
 count scales with text length at a given category rate, this shows
 up as an apparent relationship between burstiness and text length.
-Setting \code{standardize = TRUE} removes it by simulating the same
-finite-size null the correction is built on -- \code{n_sim} random
+\code{standardize} addresses this by simulating the same finite-size
+null the correction is already built on -- \code{n_sim} random
 placements of the observed number of occurrences among \code{n_words}
-token slots -- and converting the observed value to a z-score
-against that null's mean and standard deviation. The result is
-expressed in units of null-model standard deviations rather than
-\eqn{[-1, 1]}, and is comparable in magnitude across texts of
-different lengths and occurrence counts, at the cost of being
-stochastic (varies slightly run to run, unless a seed is set) and
-more expensive to compute.
+token slots -- and comparing the observed value to it. Two ways of
+doing that comparison are offered, and they are not interchangeable:
+\itemize{
+\item \code{standardize = "z"} divides by the null's standard deviation as
+well as subtracting its mean. This is an inferential statistic --
+it answers "how surprising is this value under random placement"
+-- and it reintroduces an occurrence-count dependence of its own:
+the null's standard deviation shrinks as occurrence count grows,
+so for a \emph{genuinely} bursty category (not random placement), the
+z-score grows with occurrence count even though nothing about the
+degree of clustering has changed. It reflects the strength of
+evidence against randomness, not the size of the clustering
+effect, and should not be used to compare effect magnitudes
+across texts that differ in occurrence count.
+\item \code{standardize = "center"} subtracts only the null's mean, without
+dividing by its spread. This does not have that problem: for a
+genuinely bursty category it stays roughly constant as occurrence
+count varies, while still correcting the residual mean bias the
+Kim & Jo estimator leaves at very small occurrence counts. This is
+the version to use when comparing burstiness magnitudes across
+texts of different lengths or occurrence counts (e.g.
+intercorrelating burstiness with prevalence).
+}
+
+\code{standardize = "none"} (the default) leaves the \code{method} formula
+untouched.
 }
 \examples{
 dd_burstiness(c(1, 9, 17, 25, 33, 41))  # periodic, B near -1
 dd_burstiness(c(1, 3, 5, 45, 46, 48))   # clustered, B near +1
 
-# standardized against a simulated null, so it's comparable across
-# texts of different length / occurrence count
-dd_burstiness(c(1, 3, 5, 45, 46, 48), standardize = TRUE, n_words = 48)
+# mean-centered against a simulated null: an effect size comparable
+# across texts of different length / occurrence count
+dd_burstiness(c(1, 3, 5, 45, 46, 48), standardize = "center", n_words = 48)
 }
 \references{
 Goh, K.-I., & Barabasi, A.-L. (2008). Burstiness and memory in
