@@ -1,0 +1,141 @@
+---
+title: "Standardizing burstiness for occurrence count"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Standardizing burstiness for occurrence count}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 6,
+  fig.height = 4
+)
+```
+
+```{r setup}
+library(distributionalDensity)
+set.seed(42)
+```
+
+## The problem
+
+Burstiness measures how clustered a category's occurrences are within a
+text, using the interevent times between successive occurrences.
+`dd_burstiness()` uses the finite-size-corrected estimator of Kim & Jo
+(2016) by default (`method = "kj"`), which corrects a known bias in the
+older Goh & Barabasi (2008) statistic: under random placement, the
+uncorrected statistic runs systematically negative when a category has
+few occurrences, so it partly restates occurrence count rather than
+measuring clustering independent of it.
+
+The Kim & Jo correction removes most of that *mean* bias, but not the
+*sampling variance*: burstiness estimates from few occurrences are still
+much noisier than estimates from many. Because occurrence count (`k`)
+scales with text length at a fixed category rate, this shows up in
+practice as an apparent relationship between burstiness and text length
+-- even though the underlying formula is exactly invariant to linear
+rescaling of positions and has no text-length term in it.
+
+We can see this directly by simulating random (Poisson-null) placements
+and comparing burstiness's spread as occurrence count varies, holding
+text length fixed:
+
+```{r sim-variance}
+n_sim <- 2000
+n_words <- 2000
+
+sim_once <- function(k, n_words) {
+  pos <- sort(sample.int(n_words, k))
+  dd_burstiness(pos, method = "kj")
+}
+
+results <- do.call(rbind, lapply(c(3, 5, 10, 20, 50, 100), function(k) {
+  vals <- replicate(n_sim, sim_once(k, n_words))
+  data.frame(k = k, mean_B = mean(vals), sd_B = sd(vals))
+}))
+results
+```
+
+The spread collapses from `sd` well over 0.5 at `k = 3` occurrences down
+to about 0.05 at `k = 100`, holding text length constant. In a corpus
+where category rate is roughly stable but text length varies, shorter
+texts produce fewer occurrences and therefore noisier, more extreme
+burstiness estimates -- a text-length confound in everything but name.
+
+## The fix
+
+`standardize = TRUE` (on `dd_burstiness()`, `distributional_density()`,
+and `dd()`) replaces the raw Kim & Jo value with a z-score computed
+against a simulated null: `n_sim` random placements of the same number
+of occurrences among the same number of token slots, using the same
+estimator. This is the same finite-size null the Kim & Jo correction is
+already built on -- standardizing just finishes correcting for it,
+variance and all, rather than only the mean.
+
+```{r standardize-example}
+text <- "I lift my mug and I breathe in my first sip of it, mine alone, made for me."
+self_words <- c("i", "me", "my", "mine", "myself")
+
+dd(text = text, dictionary = self_words)
+dd(text = text, dictionary = self_words, standardize = TRUE, n_sim = 2000)
+```
+
+`burstiness` changes from the raw `[-1, 1]` Kim & Jo value to a z-score
+(unbounded, roughly standard-normal in scale under the null);
+`burstiness_raw` -- the uncorrected Goh & Barabasi statistic, kept for
+comparison -- is never standardized.
+
+## Standardized burstiness is no longer confounded with occurrence count
+
+Repeating the simulation above with `standardize = TRUE` shows the mean
+stays near zero and, more importantly, the variance no longer depends
+on `k`:
+
+```{r sim-standardized}
+sim_once_std <- function(k, n_words) {
+  pos <- sort(sample.int(n_words, k))
+  dd_burstiness(pos, standardize = TRUE, n_words = n_words, n_sim = 300)
+}
+
+results_std <- do.call(rbind, lapply(c(3, 5, 10, 20, 50), function(k) {
+  vals <- replicate(300, sim_once_std(k, n_words))
+  data.frame(k = k, mean_z = mean(vals, na.rm = TRUE), sd_z = sd(vals, na.rm = TRUE))
+}))
+results_std
+```
+
+## When to use which
+
+- Use `standardize = TRUE` when burstiness will be **compared across
+  texts** that differ in length or category rate -- e.g. correlating
+  burstiness with other variables, or intercorrelating it with
+  prevalence, position, and dispersion, where a residual occurrence-count
+  dependence would otherwise masquerade as a substantive relationship.
+- Use the default `standardize = FALSE` when you want the literature's
+  published Kim & Jo statistic itself -- e.g. reporting burstiness
+  values that should read on the same `[-1, 1]` scale used elsewhere in
+  the burstiness literature, or reproducing another study's numbers.
+- `standardize = TRUE` is stochastic (it varies slightly run to run
+  unless you `set.seed()` first) and more expensive to compute, since it
+  simulates `n_sim` null placements per text-by-category combination.
+  Increase `n_sim` for more stable estimates at the cost of runtime;
+  1000 (the default) is adequate for most exploratory use, but consider
+  a larger value (e.g. 5000-10000) for a final analysis.
+- Burstiness -- standardized or not -- is only defined for categories
+  with at least 3 occurrences in a text (`NA` otherwise), and
+  `standardize = TRUE` additionally requires enough spread in occurrence
+  positions for the simulated null to have nonzero variance.
+
+## References
+
+Goh, K.-I., & Barabasi, A.-L. (2008). Burstiness and memory in complex
+systems. *Europhysics Letters*, *81*(4), 48002.
+<https://doi.org/10.1209/0295-5075/81/48002>
+
+Kim, E.-K., & Jo, H.-H. (2016). Measuring burstiness for finite event
+sequences. *Physical Review E*, *94*(3), 032311.
+<https://doi.org/10.1103/PhysRevE.94.032311>
