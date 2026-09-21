@@ -53,6 +53,14 @@ widen_scores <- function(scores) {
 #'   if `data` is not supplied and `text` is a named vector.
 #' @param bound As in [dd_dispersion()]: `"finite"` (default) or
 #'   `"continuous"`.
+#' @param standardize As in [distributional_density()]: if `TRUE`,
+#'   `burstiness` is a z-score against a simulated finite-size null
+#'   rather than the raw Kim & Jo value, removing burstiness's
+#'   residual dependence on occurrence count (and so on text length).
+#'   Default `FALSE`.
+#' @param n_sim Number of null placements to simulate per
+#'   text-by-category combination when `standardize = TRUE`. Default
+#'   1000.
 #'
 #' @return A data frame: `data` with score columns appended if `data`
 #'   was supplied, otherwise a new data frame with `id`, `text`, and
@@ -73,7 +81,8 @@ widen_scores <- function(scores) {
 #' df <- data.frame(id = c("p1", "p2"), text = texts, stringsAsFactors = FALSE)
 #' dd(text = "text", data = df, id = "id",
 #'    dictionary = list(self = self_words, time = c("day", "morning")))
-dd <- function(text, dictionary, data = NULL, id = NULL, bound = c("finite", "continuous")) {
+dd <- function(text, dictionary, data = NULL, id = NULL, bound = c("finite", "continuous"),
+               standardize = FALSE, n_sim = 1000) {
   bound <- match.arg(bound)
 
   if (!is.null(data)) {
@@ -106,7 +115,8 @@ dd <- function(text, dictionary, data = NULL, id = NULL, bound = c("finite", "co
     out <- data.frame(id = id_vec, text = unname(text_vec), stringsAsFactors = FALSE)
   }
 
-  scores <- distributional_density(text_vec, dictionary, id = id_vec, bound = bound)
+  scores <- distributional_density(text_vec, dictionary, id = id_vec, bound = bound,
+                                    standardize = standardize, n_sim = n_sim)
   wide <- widen_scores(scores)
   wide <- wide[match(id_vec, wide$id), , drop = FALSE]
 

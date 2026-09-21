@@ -4,7 +4,13 @@
 \alias{dd_burstiness}
 \title{Burstiness}
 \usage{
-dd_burstiness(positions, method = c("kj", "raw"))
+dd_burstiness(
+  positions,
+  method = c("kj", "raw"),
+  standardize = FALSE,
+  n_words = NULL,
+  n_sim = 1000
+)
 }
 \arguments{
 \item{positions}{Numeric vector of occurrence positions within the
@@ -16,10 +22,24 @@ give identical results.}
 
 \item{method}{Either \code{"kj"} (Kim & Jo, 2016, finite-size-corrected;
 default) or \code{"raw"} (Goh & Barabasi, 2008, uncorrected).}
+
+\item{standardize}{If \code{TRUE}, return a z-score of the observed
+burstiness against a simulated finite-size null instead of the
+raw \code{method} value; see Details. Requires \code{n_words}. Default
+\code{FALSE} leaves the \code{method} formula intact.}
+
+\item{n_words}{Total number of tokens in the text. Only required
+when \code{standardize = TRUE}, to define the null's token slots.}
+
+\item{n_sim}{Number of null placements to simulate when
+\code{standardize = TRUE}. Default 1000.}
 }
 \value{
-A numeric value in \eqn{[-1, 1]}, or \code{NA} if fewer than 3
-occurrences are supplied.
+When \code{standardize = FALSE} (default), a numeric value in
+\eqn{[-1, 1]}, or \code{NA} if fewer than 3 occurrences are supplied.
+When \code{standardize = TRUE}, a z-score (unbounded), or \code{NA} if
+fewer than 3 occurrences are supplied or the simulated null has
+zero variance (e.g. occurrences fill nearly every token slot).
 }
 \description{
 Measures how clustered a category's occurrences are in time (i.e.,
@@ -42,10 +62,31 @@ only.
 
 Burstiness requires at least 3 occurrences (2 interevent times) to
 be defined; with fewer, \code{NA} is returned.
+
+Even with the Kim & Jo correction, burstiness for texts with few
+occurrences remains noisier than for texts with many (the
+correction removes most of the mean bias as a function of
+occurrence count, but not the sampling variance): since occurrence
+count scales with text length at a given category rate, this shows
+up as an apparent relationship between burstiness and text length.
+Setting \code{standardize = TRUE} removes it by simulating the same
+finite-size null the correction is built on -- \code{n_sim} random
+placements of the observed number of occurrences among \code{n_words}
+token slots -- and converting the observed value to a z-score
+against that null's mean and standard deviation. The result is
+expressed in units of null-model standard deviations rather than
+\eqn{[-1, 1]}, and is comparable in magnitude across texts of
+different lengths and occurrence counts, at the cost of being
+stochastic (varies slightly run to run, unless a seed is set) and
+more expensive to compute.
 }
 \examples{
 dd_burstiness(c(1, 9, 17, 25, 33, 41))  # periodic, B near -1
 dd_burstiness(c(1, 3, 5, 45, 46, 48))   # clustered, B near +1
+
+# standardized against a simulated null, so it's comparable across
+# texts of different length / occurrence count
+dd_burstiness(c(1, 3, 5, 45, 46, 48), standardize = TRUE, n_words = 48)
 }
 \references{
 Goh, K.-I., & Barabasi, A.-L. (2008). Burstiness and memory in

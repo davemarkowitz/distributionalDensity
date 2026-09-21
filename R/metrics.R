@@ -40,6 +40,23 @@ dd_prevalence <- function(k, n_words) {
 #' Burstiness requires at least 3 occurrences (2 interevent times) to
 #' be defined; with fewer, `NA` is returned.
 #'
+#' Even with the Kim & Jo correction, burstiness for texts with few
+#' occurrences remains noisier than for texts with many (the
+#' correction removes most of the mean bias as a function of
+#' occurrence count, but not the sampling variance): since occurrence
+#' count scales with text length at a given category rate, this shows
+#' up as an apparent relationship between burstiness and text length.
+#' Setting `standardize = TRUE` removes it by simulating the same
+#' finite-size null the correction is built on -- `n_sim` random
+#' placements of the observed number of occurrences among `n_words`
+#' token slots -- and converting the observed value to a z-score
+#' against that null's mean and standard deviation. The result is
+#' expressed in units of null-model standard deviations rather than
+#' \eqn{[-1, 1]}, and is comparable in magnitude across texts of
+#' different lengths and occurrence counts, at the cost of being
+#' stochastic (varies slightly run to run, unless a seed is set) and
+#' more expensive to compute.
+#'
 #' @param positions Numeric vector of occurrence positions within the
 #'   text, in any consistent unit (e.g. 1-based token indices, or
 #'   positions normalized to \eqn{[0, 1]}); order does not matter, the
@@ -48,9 +65,20 @@ dd_prevalence <- function(k, n_words) {
 #'   give identical results.
 #' @param method Either `"kj"` (Kim & Jo, 2016, finite-size-corrected;
 #'   default) or `"raw"` (Goh & Barabasi, 2008, uncorrected).
+#' @param standardize If `TRUE`, return a z-score of the observed
+#'   burstiness against a simulated finite-size null instead of the
+#'   raw `method` value; see Details. Requires `n_words`. Default
+#'   `FALSE` leaves the `method` formula intact.
+#' @param n_words Total number of tokens in the text. Only required
+#'   when `standardize = TRUE`, to define the null's token slots.
+#' @param n_sim Number of null placements to simulate when
+#'   `standardize = TRUE`. Default 1000.
 #'
-#' @return A numeric value in \eqn{[-1, 1]}, or `NA` if fewer than 3
-#'   occurrences are supplied.
+#' @return When `standardize = FALSE` (default), a numeric value in
+#'   \eqn{[-1, 1]}, or `NA` if fewer than 3 occurrences are supplied.
+#'   When `standardize = TRUE`, a z-score (unbounded), or `NA` if
+#'   fewer than 3 occurrences are supplied or the simulated null has
+#'   zero variance (e.g. occurrences fill nearly every token slot).
 #' @export
 #'
 #' @references
@@ -65,26 +93,51 @@ dd_prevalence <- function(k, n_words) {
 #' @examples
 #' dd_burstiness(c(1, 9, 17, 25, 33, 41))  # periodic, B near -1
 #' dd_burstiness(c(1, 3, 5, 45, 46, 48))   # clustered, B near +1
-dd_burstiness <- function(positions, method = c("kj", "raw")) {
+#'
+#' # standardized against a simulated null, so it's comparable across
+#' # texts of different length / occurrence count
+#' dd_burstiness(c(1, 3, 5, 45, 46, 48), standardize = TRUE, n_words = 48)
+dd_burstiness <- function(positions, method = c("kj", "raw"),
+                           standardize = FALSE, n_words = NULL, n_sim = 1000) {
   method <- match.arg(method)
   positions <- sort(positions)
   iet <- diff(positions)
   n <- length(iet)
   if (n < 2 || mean(iet) == 0) return(NA_real_)
 
-  if (method == "raw") {
+  b <- if (method == "raw") {
     s <- pop_sd(iet)
     m <- mean(iet)
-    return((s - m) / (s + m))
+    (s - m) / (s + m)
+  } else {
+    # Kim & Jo (2016) finite-size estimator. n here is the number of
+    # interevent times, not the number of events: substituting the
+    # maximum coefficient of variation sqrt(n - 1) for r below
+    # returns exactly +1, which is what makes the estimator reach
+    # its bounds.
+    r <- pop_sd(iet) / mean(iet)
+    (sqrt(n + 1) * r - sqrt(n - 1)) /
+      ((sqrt(n + 1) - 2) * r + sqrt(n - 1))
   }
 
-  # Kim & Jo (2016) finite-size estimator. n here is the number of
-  # interevent times, not the number of events: substituting the
-  # maximum coefficient of variation sqrt(n - 1) for r below returns
-  # exactly +1, which is what makes the estimator reach its bounds.
-  r <- pop_sd(iet) / mean(iet)
-  (sqrt(n + 1) * r - sqrt(n - 1)) /
-    ((sqrt(n + 1) - 2) * r + sqrt(n - 1))
+  if (!standardize) return(b)
+
+  if (is.null(n_words) || n_words <= 0) {
+    stop("`n_words` must be a positive number when `standardize = TRUE`.", call. = FALSE)
+  }
+  k <- length(positions)
+  if (k > n_words) {
+    stop("`n_words` cannot be smaller than the number of occurrences.", call. = FALSE)
+  }
+
+  null_b <- vapply(seq_len(n_sim), function(i) {
+    dd_burstiness(sample.int(n_words, k), method = method)
+  }, numeric(1))
+  null_b <- null_b[!is.na(null_b)]
+  null_sd <- if (length(null_b) >= 2) sample_sd(null_b) else 0
+
+  if (length(null_b) < 2 || null_sd == 0) return(NA_real_)
+  (b - mean(null_b)) / null_sd
 }
 
 # Occurrence positions normalized to the unit interval at the

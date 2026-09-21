@@ -4,7 +4,15 @@
 \alias{dd}
 \title{Score text with distributional density metrics}
 \usage{
-dd(text, dictionary, data = NULL, id = NULL, bound = c("finite", "continuous"))
+dd(
+  text,
+  dictionary,
+  data = NULL,
+  id = NULL,
+  bound = c("finite", "continuous"),
+  standardize = FALSE,
+  n_sim = 1000
+)
 }
 \arguments{
 \item{text}{Either a character vector of texts, or, if \code{data} is
@@ -30,6 +38,16 @@ if \code{data} is not supplied and \code{text} is a named vector.}
 
 \item{bound}{As in \code{\link[=dd_dispersion]{dd_dispersion()}}: \code{"finite"} (default) or
 \code{"continuous"}.}
+
+\item{standardize}{As in \code{\link[=distributional_density]{distributional_density()}}: if \code{TRUE},
+\code{burstiness} is a z-score against a simulated finite-size null
+rather than the raw Kim & Jo value, removing burstiness's
+residual dependence on occurrence count (and so on text length).
+Default \code{FALSE}.}
+
+\item{n_sim}{Number of null placements to simulate per
+text-by-category combination when \code{standardize = TRUE}. Default
+1000.}
 }
 \value{
 A data frame: \code{data} with score columns appended if \code{data}

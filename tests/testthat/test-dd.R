@@ -64,3 +64,12 @@ test_that("dd() errors informatively when `text` does not name a column of `data
 test_that("dd() errors when text is not a character vector and no data is supplied", {
   expect_error(dd(text = 1:3, dictionary = "x"))
 })
+
+test_that("dd() passes standardize through to distributional_density()", {
+  set.seed(4)
+  text <- "I lift my mug and I breathe in my first sip of it, mine alone, made for me."
+  res_raw <- dd(text = text, dictionary = self_words)
+  res_std <- dd(text = text, dictionary = self_words, standardize = TRUE, n_sim = 300)
+
+  expect_false(isTRUE(all.equal(res_std$burstiness, res_raw$burstiness)))
+})

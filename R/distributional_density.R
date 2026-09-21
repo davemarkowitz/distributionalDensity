@@ -19,6 +19,15 @@
 #'   if `text` is named.
 #' @param bound Which upper bound to normalize dispersion against; see
 #'   [dd_dispersion()]. Defaults to `"finite"`.
+#' @param standardize If `TRUE`, the `burstiness` column holds a
+#'   z-score against a simulated finite-size null instead of the raw
+#'   Kim & Jo value, removing burstiness's residual dependence on
+#'   occurrence count (and so on text length); see
+#'   [dd_burstiness()]. `burstiness_raw` is never standardized.
+#'   Default `FALSE`.
+#' @param n_sim Number of null placements to simulate per
+#'   text-by-category combination when `standardize = TRUE`. Default
+#'   1000.
 #'
 #' @return A data frame with one row per text-by-category combination
 #'   and columns `id`, `category`, `n_words`, `n_events`, `prevalence`,
@@ -41,7 +50,8 @@
 #'   texts,
 #'   list(self = self_words, time = c("day", "morning"))
 #' )
-distributional_density <- function(text, dictionary, id = NULL, bound = c("finite", "continuous")) {
+distributional_density <- function(text, dictionary, id = NULL, bound = c("finite", "continuous"),
+                                    standardize = FALSE, n_sim = 1000) {
   bound <- match.arg(bound)
   if (!is.character(text) || length(text) < 1) {
     stop("`text` must be a non-empty character vector.", call. = FALSE)
@@ -69,7 +79,8 @@ distributional_density <- function(text, dictionary, id = NULL, bound = c("finit
         n_words               = n_words,
         n_events              = k,
         prevalence            = if (n_words > 0) dd_prevalence(k, n_words) else NA_real_,
-        burstiness            = dd_burstiness(positions, method = "kj"),
+        burstiness            = dd_burstiness(positions, method = "kj", standardize = standardize,
+                                               n_words = n_words, n_sim = n_sim),
         burstiness_raw        = dd_burstiness(positions, method = "raw"),
         position              = dd_position(positions, n_words),
         dispersion            = dd_dispersion(positions, n_words, bound = "finite"),

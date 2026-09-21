@@ -4,6 +4,12 @@
 # population, so the population form is used throughout.
 pop_sd <- function(x) sqrt(mean((x - mean(x))^2))
 
+# Sample standard deviation (denominator n - 1). Used only to
+# estimate the spread of a Monte Carlo null distribution from a
+# finite number of simulation draws, which is a sample estimate
+# rather than a population quantity, unlike pop_sd() above.
+sample_sd <- function(x) sqrt(sum((x - mean(x))^2) / (length(x) - 1))
+
 #' Tokenize text into words
 #'
 #' Splits text on runs of characters that are not letters or

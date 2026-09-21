@@ -8,7 +8,9 @@ distributional_density(
   text,
   dictionary,
   id = NULL,
-  bound = c("finite", "continuous")
+  bound = c("finite", "continuous"),
+  standardize = FALSE,
+  n_sim = 1000
 )
 }
 \arguments{
@@ -27,6 +29,17 @@ if \code{text} is named.}
 
 \item{bound}{Which upper bound to normalize dispersion against; see
 \code{\link[=dd_dispersion]{dd_dispersion()}}. Defaults to \code{"finite"}.}
+
+\item{standardize}{If \code{TRUE}, the \code{burstiness} column holds a
+z-score against a simulated finite-size null instead of the raw
+Kim & Jo value, removing burstiness's residual dependence on
+occurrence count (and so on text length); see
+\code{\link[=dd_burstiness]{dd_burstiness()}}. \code{burstiness_raw} is never standardized.
+Default \code{FALSE}.}
+
+\item{n_sim}{Number of null placements to simulate per
+text-by-category combination when \code{standardize = TRUE}. Default
+1000.}
 }
 \value{
 A data frame with one row per text-by-category combination

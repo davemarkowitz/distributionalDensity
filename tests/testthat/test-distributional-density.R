@@ -64,6 +64,17 @@ test_that("a single unnamed dictionary vector is labeled 'category'", {
   expect_equal(res$category, "category")
 })
 
+test_that("standardize = TRUE replaces burstiness with a z-score but leaves burstiness_raw untouched", {
+  set.seed(3)
+  text <- "I lift my mug and I breathe in my first sip of it, mine alone, made for me."
+  dict <- c("i", "me", "my", "mine")
+  res_raw <- distributional_density(text, dict)
+  res_std <- distributional_density(text, dict, standardize = TRUE, n_sim = 300)
+
+  expect_equal(res_std$burstiness_raw, res_raw$burstiness_raw)
+  expect_false(isTRUE(all.equal(res_std$burstiness, res_raw$burstiness)))
+})
+
 test_that("bound = 'continuous' substitutes the continuous-bound dispersion", {
   res_finite <- distributional_density(
     "I lift my mug and I breathe in my first sip of it, mine alone, made for me.",
